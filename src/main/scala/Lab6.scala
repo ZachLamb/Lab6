@@ -126,7 +126,10 @@ object Lab6 extends jsy.util.JsyApplication {
       case _ => Failure("expected not",next)
     }
 
-    def not(next: Input): ParseResult[RegExpr] = throw new UnsupportedOperationException
+    def not(next: Input): ParseResult[RegExpr] = (next.first,next.rest) match {
+      case ('~',rest) => not(rest)
+      case _ => star(next)
+    }
 
     def star(next: Input): ParseResult[RegExpr] = throw new UnsupportedOperationException
 

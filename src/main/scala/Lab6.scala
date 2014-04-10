@@ -110,7 +110,21 @@ object Lab6 extends jsy.util.JsyApplication {
       case _ => Failure("expected concat", next)
     }
 
-    def concat(next: Input): ParseResult[RegExpr] = throw new UnsupportedOperationException
+    def concat(next: Input): ParseResult[RegExpr] = not(next) match {
+      case Success(r,next) => {
+        def concats(acc:RegExpr, next:Input):ParseResult[RegExpr] = {
+          if(next.atEnd) Success(acc,next)
+          else next.rest match {
+            case next => not(next) match {
+              case Success(r,next) => concats(RConcat(acc,r),next)
+              case _ => Failure("expected not",next)
+            }
+          }
+        }
+        concats(r,next)
+      }
+      case _ => Failure("expected not",next)
+    }
 
     def not(next: Input): ParseResult[RegExpr] = throw new UnsupportedOperationException
 

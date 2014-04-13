@@ -127,17 +127,27 @@ object Lab6 extends jsy.util.JsyApplication {
     }
 
     def not(next: Input): ParseResult[RegExpr] = (next.first,next.rest) match {
-      case ('~',rest) => not(rest)
+      case ('~',rest) => not(rest) match {
+        case Success(r,next) => Success(RNeg(r),next)
+        case _ => Failure("expected something",next)
+      }
       case _ => star(next)
     }
 
-    def star(next: Input): ParseResult[RegExpr] = throw new UnsupportedOperationException
+    def star(next: Input): ParseResult[RegExpr] = next match {
+      case _ => throw new UnsupportedOperationException
+    }
 
     /* This set is useful to check if a Char is/is not a regular expression
        meta-language character.  Use delimiters.contains(c) for a Char c. */
     val delimiters = Set('|', '&', '~', '*', '+', '?', '!', '#', '.', '(', ')')
 
-    def atom(next: Input): ParseResult[RegExpr] = throw new UnsupportedOperationException
+    def atom(next: Input): ParseResult[RegExpr] = next.first match {
+      case '!' => Success(RNoString,next)
+      case '#' => Success(REmptyString,next)
+      case '.' => Success(RAnyChar,next)
+      case '(' => throw new UnsupportedOperationException
+    }
     
 
     /* External Interface */

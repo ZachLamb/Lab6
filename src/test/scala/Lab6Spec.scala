@@ -92,7 +92,7 @@ class Lab6Spec extends FlatSpec {
 
   "retest/respecs1" should "should perform regular expression matching" in {
     for ((_,re) <- respecsast(1)) {
-      for (s <- strings) assertRefRetest(re, s)
+      for (s <- strings) {println(re+"\t"+s);assertRefRetest(re, s)}
     }
   }
 

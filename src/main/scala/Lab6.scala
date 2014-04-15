@@ -114,7 +114,7 @@ object Lab6 extends jsy.util.JsyApplication {
       case Success(r,next) => {
         def concats(acc:RegExpr, next:Input):ParseResult[RegExpr] = {
           if(next.atEnd) Success(acc,next)
-          else next.rest match {
+          else next match {
             case next => not(next) match {
               case Success(r,next) => concats(RConcat(acc,r),next)
               case _ => Failure("expected not",next)
@@ -123,9 +123,10 @@ object Lab6 extends jsy.util.JsyApplication {
         }
         concats(r,next)
       }
-      case _ => Failure("expected not",next)
+      case p => Failure("expected not",next)
     }
 
+    
     def not(next: Input): ParseResult[RegExpr] = (next.first,next.rest) match {
       case ('~',rest) => not(rest) match {
         case Success(r,next) => Success(RNeg(r),next)
@@ -134,8 +135,21 @@ object Lab6 extends jsy.util.JsyApplication {
       case _ => star(next)
     }
 
-    def star(next: Input): ParseResult[RegExpr] = next match {
-      case _ => throw new UnsupportedOperationException
+    /*done*/
+    def star(next: Input): ParseResult[RegExpr] = atom(next) match {
+	  case Success(r,next) if (!next.atEnd) => {
+	    def stars(acc:RegExpr,next:Input):ParseResult[RegExpr] = {
+	      if (next.atEnd) Success(acc,next)
+	      else (next.first,next.rest) match {
+	        case ('*',next) => stars(RStar(acc),next)
+	        case('+',next) => stars(RPlus(acc),next)
+	        case('?',next) => stars(ROption(acc),next)
+	        case _ => Success(acc,next)
+	      }
+	    }
+	    stars(r,next)
+      }
+      case p => p
     }
 
     /* This set is useful to check if a Char is/is not a regular expression
@@ -143,10 +157,12 @@ object Lab6 extends jsy.util.JsyApplication {
     val delimiters = Set('|', '&', '~', '*', '+', '?', '!', '#', '.', '(', ')')
 
     def atom(next: Input): ParseResult[RegExpr] = next.first match {
-      case '!' => Success(RNoString,next)
-      case '#' => Success(REmptyString,next)
-      case '.' => Success(RAnyChar,next)
-      case '(' => throw new UnsupportedOperationException
+      case '!' => Success(RNoString,next.rest)
+      case '#' => Success(REmptyString,next.rest)
+      case '.' => Success(RAnyChar,next.rest)
+      case c if (!delimiters.contains(c)) => Success(RSingle(c),next.rest)
+//      case '(' => re(next.rest.toString())
+//      case ')' => Success(test,next.rest)
     }
     
 
@@ -165,15 +181,20 @@ object Lab6 extends jsy.util.JsyApplication {
   /*** Regular Expression Matching ***/
   
   def retest(re: RegExpr, s: String): Boolean = {
-    def test(re: RegExpr, chars: List[Char], sc: List[Char] => Boolean): Boolean = (re, chars) match {
+    def test(re: RegExpr, chars: List[Char], sc: List[Char] => Boolean): Boolean = {
+      println("chars: " + chars)
+      (re, chars) match {
       /* Basic Operators */
       case (RNoString, _) => throw new UnsupportedOperationException
-      case (REmptyString, _) => throw new UnsupportedOperationException
-      case (RSingle(_), Nil) => throw new UnsupportedOperationException
-      case (RSingle(c1), c2 :: t) => throw new UnsupportedOperationException
+      case (REmptyString, _) => true && sc(chars)
+      case (RSingle(_), Nil) => false
+      case (RSingle(c1), c2 :: t) => if (c1 == c2) sc(t) else false
       case (RConcat(re1, re2), _) => throw new UnsupportedOperationException
       case (RUnion(re1, re2), _) => throw new UnsupportedOperationException
-      case (RStar(re1), _) => throw new UnsupportedOperationException
+      case (RStar(re1), _) => test(re1,chars, ch => ch match {
+        case c1 :: t if (c1 == '*') => sc(t)
+        case _ => false
+      })
 
       /* Extended Operators */
       case (RAnyChar, Nil) => false
@@ -185,7 +206,8 @@ object Lab6 extends jsy.util.JsyApplication {
       case (RIntersect(re1, re2), _) => throw new UnsupportedOperationException 
       case (RNeg(re1), _) => throw new UnsupportedOperationException 
     } 
-    test(re, s.toList, { chars => chars.isEmpty })
+    }
+    test(re, s.toList, { chars => chars.isEmpty });
   }
   
   

@@ -200,11 +200,11 @@ object Lab6 extends jsy.util.JsyApplication {
     def test(re: RegExpr, chars: List[Char], sc: List[Char] => Boolean): Boolean = {
       (re, chars) match {
       /* Basic Operators */
-      case (RNoString, _) => if (chars.isEmpty) sc(chars) else false
-      case (REmptyString, _) => sc(chars)
-      case (RSingle(_), Nil) => false
-      case (RSingle(c1), c2 :: t) => if (c1 == c2) sc(t) else false
-      case (RConcat(re1, re2), _) => test(re1,chars,ch1 => test(re2,ch1,sc))
+      case (RNoString, _) => throw new UnsupportedOperationException
+      case (REmptyString, _) => throw new UnsupportedOperationException
+      case (RSingle(_), Nil) => throw new UnsupportedOperationException
+      case (RSingle(c1), c2 :: t) => throw new UnsupportedOperationException
+      case (RConcat(re1, re2), _) => throw new UnsupportedOperationException
       case (RUnion(re1, re2), _) => throw new UnsupportedOperationException
       case (RStar(re1), _) => throw new UnsupportedOperationException
 

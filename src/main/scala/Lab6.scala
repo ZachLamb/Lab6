@@ -90,7 +90,7 @@ object Lab6 extends jsy.util.JsyApplication {
           }
         unions(r, next)
       }
-      case _ => Failure("expected intersect", next)
+      case f => f
     }
 
     def intersect(next: Input): ParseResult[RegExpr] = concat(next) match {
@@ -107,32 +107,38 @@ object Lab6 extends jsy.util.JsyApplication {
         }
         intersects(r,next)
       }
-      case _ => Failure("expected concat", next)
+      case f => f
     }
 
-    def concat(next: Input): ParseResult[RegExpr] = not(next) match {
-      case Success(r,next) => {
-        def concats(acc:RegExpr, next:Input):ParseResult[RegExpr] = {
-          if(next.atEnd) Success(acc,next)
-          else next match {
-            case next => not(next) match {
-              case Success(r,next) => concats(RConcat(acc,r),next)
-              case _ => Failure("expected not",next)
-            }
-          }
-        }
-        concats(r,next)
-      }
-      case p => Failure("expected not",next)
+    def concat(next: Input): ParseResult[RegExpr] = {
+      if (!next.atEnd) {
+	    not(next) match {
+	      case Success(r,next) => {
+	        def concats(acc:RegExpr, next:Input):ParseResult[RegExpr] = {
+	          if(next.atEnd || next.first == '|' || next.first == '&' || next.first == ')') Success(acc,next)
+	          else not(next) match {
+	            case Success(r,next) => concats(RConcat(acc,r),next)
+	            case f => f
+	          }
+	        }
+	        concats(r,next)
+	      }
+	      case f => f
+	    }
+      } else Failure("expected concat",next)
     }
 
     
-    def not(next: Input): ParseResult[RegExpr] = (next.first,next.rest) match {
-      case ('~',rest) => not(rest) match {
-        case Success(r,next) => Success(RNeg(r),next)
-        case _ => Failure("expected something",next)
-      }
-      case _ => star(next)
+    def not(next: Input): ParseResult[RegExpr] = {
+      if (!next.atEnd) {
+	    (next.first,next.rest) match {
+		  case ('~',next) => not(next) match {
+		    case Success(r,next) => Success(RNeg(r),next)
+		    case f => f
+		  }
+		  case _ => star(next)
+		}
+      } else Failure("expected not", next)
     }
 
     /*done*/
@@ -149,20 +155,30 @@ object Lab6 extends jsy.util.JsyApplication {
 	    }
 	    stars(r,next)
       }
-      case p => p
+      case f => f
     }
 
     /* This set is useful to check if a Char is/is not a regular expression
        meta-language character.  Use delimiters.contains(c) for a Char c. */
     val delimiters = Set('|', '&', '~', '*', '+', '?', '!', '#', '.', '(', ')')
 
-    def atom(next: Input): ParseResult[RegExpr] = next.first match {
-      case '!' => Success(RNoString,next.rest)
-      case '#' => Success(REmptyString,next.rest)
-      case '.' => Success(RAnyChar,next.rest)
-      case c if (!delimiters.contains(c)) => Success(RSingle(c),next.rest)
-//      case '(' => re(next.rest.toString())
-//      case ')' => Success(test,next.rest)
+    def atom(next: Input): ParseResult[RegExpr] = {
+      if (next.atEnd) Failure("expected atom",next)
+      else {
+        (next.first,next.rest) match {
+          case (c,next) if (!delimiters.contains(c)) => ;Success(RSingle(c),next)
+          case ('!',next) => Success(RNoString,next)
+		  case ('#',next) => Success(REmptyString,next)
+		  case ('.',next) => Success(RAnyChar,next)
+		  case ('(',next) => re(next) match {
+		    case Success(r,next) => (next.first,next.rest) match {
+		      case (')',next) => Success(r,next)
+		      case _ => Failure("expected ')'",next)
+		    } 
+		    case f => f
+		  }
+        }
+      }
     }
     
 
@@ -182,19 +198,15 @@ object Lab6 extends jsy.util.JsyApplication {
   
   def retest(re: RegExpr, s: String): Boolean = {
     def test(re: RegExpr, chars: List[Char], sc: List[Char] => Boolean): Boolean = {
-      println("chars: " + chars)
       (re, chars) match {
       /* Basic Operators */
-      case (RNoString, _) => throw new UnsupportedOperationException
-      case (REmptyString, _) => true && sc(chars)
+      case (RNoString, _) => if (chars.isEmpty) sc(chars) else false
+      case (REmptyString, _) => sc(chars)
       case (RSingle(_), Nil) => false
       case (RSingle(c1), c2 :: t) => if (c1 == c2) sc(t) else false
-      case (RConcat(re1, re2), _) => throw new UnsupportedOperationException
+      case (RConcat(re1, re2), _) => test(re1,chars,ch1 => test(re2,ch1,sc))
       case (RUnion(re1, re2), _) => throw new UnsupportedOperationException
-      case (RStar(re1), _) => test(re1,chars, ch => ch match {
-        case c1 :: t if (c1 == '*') => sc(t)
-        case _ => false
-      })
+      case (RStar(re1), _) => throw new UnsupportedOperationException
 
       /* Extended Operators */
       case (RAnyChar, Nil) => false

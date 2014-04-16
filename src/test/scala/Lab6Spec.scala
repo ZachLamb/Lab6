@@ -87,12 +87,12 @@ class Lab6Spec extends FlatSpec {
   }
 
   "parse/respecs5" should "should produce the appropriate RegExpr AST" in {
-    for ((str,re) <- respecsast(5)) assertResult(re) { RegExprParser.parse(str) }
+    for ((str,re) <- respecsast(5)) assertResult(re) { println(str);RegExprParser.parse(str) }
   }
 
   "retest/respecs1" should "should perform regular expression matching" in {
     for ((_,re) <- respecsast(1)) {
-      for (s <- strings) {println(re+"\t"+s);assertRefRetest(re, s)}
+      for (s <- strings) {assertRefRetest(re, s)}
     }
   }
 

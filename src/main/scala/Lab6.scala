@@ -1,5 +1,6 @@
 import jsy.lab6.JsyInterpreter
 import jsy.lab6.JsyParser
+import jsy.lab6.ast._
 
 object Lab6 extends jsy.util.JsyApplication {
   import jsy.lab6.ast._
@@ -200,26 +201,29 @@ object Lab6 extends jsy.util.JsyApplication {
     def test(re: RegExpr, chars: List[Char], sc: List[Char] => Boolean): Boolean = {
       (re, chars) match {
       /* Basic Operators */
-      case (RNoString, _) => throw new UnsupportedOperationException
-      case (REmptyString, _) => throw new UnsupportedOperationException
-      case (RSingle(_), Nil) => throw new UnsupportedOperationException
-      case (RSingle(c1), c2 :: t) => throw new UnsupportedOperationException
-      case (RConcat(re1, re2), _) => throw new UnsupportedOperationException
-      case (RUnion(re1, re2), _) => throw new UnsupportedOperationException
-      case (RStar(re1), _) => throw new UnsupportedOperationException
+      case (RNoString, _) => false
+      case (REmptyString, _) => sc(chars)
+      case (RSingle(_), Nil) => false
+      case (RSingle(c1), c2 :: t) => if (c1 == c2) sc(t) else false
+      case (RConcat(re1, re2), _) => test(re1,chars,ch1 => test(re2,ch1,sc))
+      case (RUnion(re1, re2), _) => test(re1, chars, sc) || test(re2, chars, sc)
+      case (RStar(re1), _) => sc(chars) || test(re1, chars, { remchars => if (remchars.length < chars.length) test(RStar(re1), remchars, sc) else false })
 
       /* Extended Operators */
       case (RAnyChar, Nil) => false
       case (RAnyChar, _ :: t) => sc(t)
-      case (RPlus(re1), _) => throw new UnsupportedOperationException
-      case (ROption(re1), _) => throw new UnsupportedOperationException 
+      case (RPlus(re1), _) => test(RConcat(re1, RStar(re1)), chars, sc)
+      case (ROption(re1), _) => test(RUnion(REmptyString,re1),chars,sc) 
       
       /***** Extra Credit Cases *****/
       case (RIntersect(re1, re2), _) => throw new UnsupportedOperationException 
       case (RNeg(re1), _) => throw new UnsupportedOperationException 
     } 
     }
-    test(re, s.toList, { chars => chars.isEmpty });
+    val mrt = test(re, s.toList, { chars => chars.isEmpty })
+    val rrt = jsy.lab6.Lab6Reference.retest(re, s)
+    //println("Is correct("+rrt+"/"+mrt+"): " + (mrt ==rrt))
+    mrt
   }
   
   
